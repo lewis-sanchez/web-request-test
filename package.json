@@ -3,6 +3,11 @@
   "displayName": "Web Request Test",
   "description": "This extension sends a web request using axios, and is intended to test if manually configuring a proxy agent for axios works in proxy environments.",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lewis-sanchez/web-request-test.git"
+  },
+  "homepage": "https://github.com/lewis-sanchez/web-request-test/blob/main/README.md",
   "engines": {
     "vscode": "^1.82.0"
   },
