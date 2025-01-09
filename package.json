@@ -1,7 +1,7 @@
 {
   "name": "web-request-test",
   "displayName": "Web Request Test",
-  "description": "Sends a web request using axios",
+  "description": "This extension sends a web request using axios, and is intended to test if manually configuring a proxy agent for axios works in proxy environments.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.82.0"
@@ -34,7 +34,7 @@
     "https-proxy-agent": "5.0.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "^1.82.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/tunnel": "0.0.1",
