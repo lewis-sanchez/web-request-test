@@ -21,6 +21,10 @@
       {
         "command": "web-request-test.makeWebRequest",
         "title": "Make Get Request"
+      },
+      {
+        "command": "web-request-test.addAadAccount",
+        "title": "Add AAD Account"
       }
     ]
   },
@@ -33,6 +37,8 @@
     "test": "vscode-test"
   },
   "dependencies": {
+    "@azure/msal-node": "^2.12.0",
+    "@azure/arm-subscriptions": "^5.0.0",
     "axios": "1.7.4",
     "tunnel": "0.0.6",
     "http-proxy-agent": "5.0.0",

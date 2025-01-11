@@ -52,6 +52,47 @@ export async function makeGetRequest<T>(requestUrl: string) {
     return response;
 }
 
+export async function makeGetRequestWithToken<T>(requestUrl: string, token: string) {
+    const config: AxiosRequestConfig = {
+        headers: {
+            'Content-Type': 'application/json',
+             Authorization: `Bearer ${token}`,
+        },
+        validateStatus: () => true,
+        proxy: false
+    };
+
+    const httpConfig = vscode.workspace.getConfiguration('http');
+    let proxy = loadEnvironmentProxyValue();
+    if (!proxy) {
+        console.log("Checking workspace HTTP configuration for proxy endpoint.");
+        proxy = httpConfig['proxy'] as string;
+    }
+
+    if (proxy) {
+        console.log(`Proxy endpoint: ${proxy}`);
+        console.log("Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
+
+        const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
+
+        if (proxy.startsWith('https')) {
+            console.log("Setting https agent in axios request config.");
+
+            config.httpsAgent = agent;
+        }
+        else {
+            console.log("Setting http agent in axios request config.");
+
+            config.httpAgent = agent;
+        }
+    }
+
+    console.log("Sending GET request to provided request URL: ", requestUrl);
+    const response: AxiosResponse = await axios.get<T>(requestUrl, config);
+
+    return response;
+}
+
 function loadEnvironmentProxyValue(): string | undefined {
     const HTTPS_PROXY = 'HTTPS_PROXY';
     const HTTP_PROXY = 'HTTP_PROXY';
