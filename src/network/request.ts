@@ -13,6 +13,8 @@ interface ProxyAgent {
 }
 
 export async function makeGetRequest<T>(requestUrl: string) {
+    console.log('[ext: web-request-test] makeGetRequest called with requestUrl: ', requestUrl);
+
     const config: AxiosRequestConfig = {
         headers: {
             'Content-Type': 'application/json',
@@ -24,68 +26,114 @@ export async function makeGetRequest<T>(requestUrl: string) {
     const httpConfig = vscode.workspace.getConfiguration('http');
     let proxy = loadEnvironmentProxyValue();
     if (!proxy) {
-        console.log("Checking workspace HTTP configuration for proxy endpoint.");
+        console.log("[ext: web-request-test] Checking workspace HTTP configuration for proxy endpoint.");
         proxy = httpConfig['proxy'] as string;
     }
 
     if (proxy) {
-        console.log(`Proxy endpoint: ${proxy}`);
-        console.log("Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
+        console.log('[ext: web-request-test] Found proxy endpoint: ', proxy);
+        console.log("[ext: web-request-test] Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
 
         const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
 
         if (proxy.startsWith('https')) {
-            console.log("Setting https agent in axios request config.");
+            console.log("[ext: web-request-test] Setting https agent in axios request config.");
 
             config.httpsAgent = agent;
         }
         else {
-            console.log("Setting http agent in axios request config.");
+            console.log("[ext: web-request-test] Setting http agent in axios request config.");
 
             config.httpAgent = agent;
         }
     }
 
-    console.log("Sending GET request to provided request URL: ", requestUrl);
+    console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
+    const response: AxiosResponse = await axios.get<T>(requestUrl, config);
+
+    return response;
+}
+
+export async function makeGetRequestWithToken<T>(requestUrl: string, token: string) {
+    console.log('[ext: web-request-test] makeGetRequestWithToken called');
+    const config: AxiosRequestConfig = {
+        headers: {
+            'Content-Type': 'application/json',
+             Authorization: `Bearer ${token}`,
+        },
+        validateStatus: () => true,
+        proxy: false
+    };
+
+    const httpConfig = vscode.workspace.getConfiguration('http');
+    let proxy = loadEnvironmentProxyValue();
+    if (!proxy) {
+        console.log("[ext: web-request-test] Checking workspace HTTP configuration for proxy endpoint.");
+        proxy = httpConfig['proxy'] as string;
+    }
+
+    if (proxy) {
+        console.log(`[ext: web-request-test] Found proxy endpoint: ${proxy}`);
+        console.log("[ext: web-request-test] Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
+
+        const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
+
+        if (proxy.startsWith('https')) {
+            console.log("[ext: web-request-test] Setting https agent in axios request config.");
+
+            config.httpsAgent = agent;
+        }
+        else {
+            console.log("[ext: web-request-test] Setting http agent in axios request config.");
+
+            config.httpAgent = agent;
+        }
+    }
+
+    console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
     const response: AxiosResponse = await axios.get<T>(requestUrl, config);
 
     return response;
 }
 
 function loadEnvironmentProxyValue(): string | undefined {
+    console.log('[ext: web-request-test] loadEnvironmentProxyValue called.');
+
     const HTTPS_PROXY = 'HTTPS_PROXY';
     const HTTP_PROXY = 'HTTP_PROXY';
 
     if (!process) {
-        console.log("No process object found.");
+        console.log("[ext: web-request-test] No process object found.");
         return undefined;
     }
 
     if (process.env[HTTPS_PROXY] || process.env[HTTPS_PROXY.toLowerCase()]) {
-        console.log("Loading proxy value from HTTPS_PROXY environment variable.");
+        console.log("[ext: web-request-test] Loading proxy value from HTTPS_PROXY environment variable.");
 
         return process.env[HTTPS_PROXY] || process.env[HTTPS_PROXY.toLowerCase()];
     }
     else if (process.env[HTTP_PROXY] || process.env[HTTP_PROXY.toLowerCase()]) {    
-        console.log("Loading proxy value from HTTP_PROXY environment variable.");
+        console.log("[ext: web-request-test] Loading proxy value from HTTP_PROXY environment variable.");
         
         return process.env[HTTP_PROXY] || process.env[HTTP_PROXY.toLowerCase()];
     }
 
-    console.log("No proxy value found in either HTTPS_PROXY or HTTP_PROXY environment variables.");
+    console.log("[ext: web-request-test] No proxy value found in either HTTPS_PROXY or HTTP_PROXY environment variables.");
     
     return undefined;
 }
 
 function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boolean): ProxyAgent {
+    console.log('[ext: web-request-test] createProxyAgent called.');
+
     const agentOptions = getProxyAgentOptions(url.parse(requestUrl), proxy, proxyStrictSSL);
     if (!agentOptions || !agentOptions.host || !agentOptions.port) {
-        throw new Error('Unable to read proxy agent options to create proxy agent.');
+        throw new Error('[ext: web-request-test] Unable to read proxy agent options to create proxy agent.');
     }
 
     let tunnelOptions: tunnel.HttpsOverHttpsOptions = {};
     if (typeof agentOptions.auth === 'string' && agentOptions.auth) {
-        console.log("Creating tunnelOptions with proxyAuth property because it is specified in proxy endpoint.");
+        console.log("[ext: web-request-test] Creating tunnelOptions with proxyAuth property because it is specified in proxy endpoint.");
         
         tunnelOptions = {
             proxy: {
@@ -95,10 +143,10 @@ function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boo
             }
         };
 
-        console.log("Proxy details: ", { proxyAuth: agentOptions.auth, host: agentOptions.host, port: Number(agentOptions.port) });
+        console.log("[ext: web-request-test] Proxy details: ", { proxyAuth: agentOptions.auth, host: agentOptions.host, port: Number(agentOptions.port) });
     }
     else {
-        console.log("Creating tunnelOptions without proxyAuth property because it's not specified in proxy endpoint.");
+        console.log("[ext: web-request-test] Creating tunnelOptions without proxyAuth property because it's not specified in proxy endpoint.");
         
         tunnelOptions = {
             proxy: {
@@ -107,14 +155,14 @@ function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boo
             }
         };
 
-        console.log("Proxy details: ", { host: agentOptions.host, port: Number(agentOptions.port) });
+        console.log("[ext: web-request-test] Proxy details: ", { host: agentOptions.host, port: Number(agentOptions.port) });
     }
 
     const isRequestHttps = requestUrl.startsWith('https');
-    console.log("Is request URL protocol using HTTPS: ", isRequestHttps);
+    console.log("[ext: web-request-test] Is request URL protocol using HTTPS: ", isRequestHttps);
 
     const isProxyHttps = proxy.startsWith('https');
-    console.log("Is proxy endpoint protocol using HTTPS: ", isProxyHttps);
+    console.log("[ext: web-request-test] Is proxy endpoint protocol using HTTPS: ", isProxyHttps);
 
     const proxyAgent = {
         isHttps: isRequestHttps,
@@ -125,20 +173,22 @@ function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boo
 }
 
 function createTunnelingAgent(isRequestHttps: boolean, isProxyHttps: boolean, tunnelOptions: tunnel.HttpsOverHttpsOptions): http.Agent | https.Agent {
+    console.log('[ext: web-request-test] createTunnelingAgent called.');
+
     if (isRequestHttps && isProxyHttps) {
-        console.log('Creating https over https proxy tunneling agent.');
+        console.log('[ext: web-request-test] Creating https over https proxy tunneling agent.');
         return tunnel.httpsOverHttps(tunnelOptions);
     }
     else if (isRequestHttps && !isProxyHttps) {
-        console.log('Creating https over http proxy tunneling agent.');
+        console.log('[ext: web-request-test] Creating https over http proxy tunneling agent.');
         return tunnel.httpsOverHttp(tunnelOptions);
     }
     else if (!isRequestHttps && isProxyHttps) {
-        console.log('Creating http over https proxy tunneling agent.');
+        console.log('[ext: web-request-test] Creating http over https proxy tunneling agent.');
         return tunnel.httpOverHttps(tunnelOptions);
     }
     else {
-        console.log('Creating http over http proxy tunneling agent.');
+        console.log('[ext: web-request-test] Creating http over http proxy tunneling agent.');
         return tunnel.httpOverHttp(tunnelOptions);
     }
 }

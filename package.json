@@ -2,6 +2,7 @@
   "name": "web-request-test",
   "displayName": "Web Request Test",
   "description": "This extension sends a web request using axios, and is intended to test if manually configuring a proxy agent for axios works in proxy environments.",
+  "publisher": "lewis-sanchez",
   "version": "0.0.1",
   "repository": {
     "type": "git",
@@ -21,6 +22,10 @@
       {
         "command": "web-request-test.makeWebRequest",
         "title": "Make Get Request"
+      },
+      {
+        "command": "web-request-test.addAadAccount",
+        "title": "Add AAD Account"
       }
     ]
   },
@@ -33,6 +38,8 @@
     "test": "vscode-test"
   },
   "dependencies": {
+    "@azure/msal-node": "^2.12.0",
+    "@azure/arm-subscriptions": "^5.0.0",
     "axios": "1.7.4",
     "tunnel": "0.0.6",
     "http-proxy-agent": "5.0.0",
