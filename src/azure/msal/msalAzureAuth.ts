@@ -47,20 +47,25 @@ export abstract class MsalAzureAuth {
     }
 
     public async startLogin(): Promise<IAccount | IPromptFailedResult> {
+        console.log("[ext: web-request-test] startLogin called");
+
         let loginComplete: IDeferred<void, Error> | undefined = undefined;
         try {
-            console.log("Starting login");
+            
             if (!this.providerSettings.resources.windowsManagementResource) {
-                throw new Error(`Provider '${this.providerSettings.displayName}' does not have a Microsoft resource endpoint defined.`);
+                console.error(`[ext: web-request-test] Provider '${this.providerSettings.displayName}' does not have a Microsoft resource endpoint defined.`);
+                throw new Error(`[ext: web-request-test] Provider '${this.providerSettings.displayName}' does not have a Microsoft resource endpoint defined.`);
             }
             const result = await this.login(Constants.organizationTenant);
             loginComplete = result.authComplete;
             if (!result?.response || !result.response?.account) {
-                console.error(`Authentication failed: ${loginComplete}`);
+                console.error(`[ext: web-request-test] Authentication failed`);
                 return {
                     canceled: false,
                 };
             }
+            console.log('[ext: web-request-test] Authentication succeeded');
+
             const token: IToken = {
                 token: result.response.accessToken,
                 key: result.response.account.homeAccountId,
@@ -71,17 +76,16 @@ export abstract class MsalAzureAuth {
             loginComplete?.resolve();
             return account;
         } catch (ex) {
-            console.error(`Login failed: ${ex}`);
             if (ex instanceof AzureAuthError) {
                 if (loginComplete) {
                     loginComplete.reject(ex);
-                    console.error(ex);
+                console.error(`[ext: web-request-test] Login failed with Azure auth error: ${ex}`);
                 } else {
                     void vscode.window.showErrorMessage(ex.message);
-                    console.error(ex.originalMessageAndException);
+                    console.error(`[ext: web-request-test] Login failed with original message and exception: ${ex.originalMessageAndException}`);
                 }
             } else {
-                console.error(ex);
+                console.error(`[ext: web-request-test] Login failed with error: ${ex}`);
             }
             return {
                 canceled: false,
@@ -93,8 +97,14 @@ export abstract class MsalAzureAuth {
         token: IToken | IAccessToken,
         tokenClaims: ITokenClaims,
     ): Promise<IAccount> {
+        console.log('[ext: web-request-test] hydrateAccount called');
+
         const tenants = await this.getTenants(token.token);
+        console.log('[ext: web-request-test] Final tenants list: ', tenants);
+
         let account = this.createAccount(tokenClaims, token.key, tenants);
+        console.log('[ext: web-request-test] Hydrated account: ', account);
+
         return account;
     }
 
@@ -104,12 +114,13 @@ export abstract class MsalAzureAuth {
     }>;
 
     public async getTenants(token: string): Promise<ITenant[]> {
+        console.log('[ext: web-request-test] getTenants called');
         const tenantUri = url.resolve(
             this.providerSettings.resources.azureManagementResource.endpoint,
             "tenants?api-version=2019-11-01",
         );
         try {
-            console.log("Fetching tenants with uri {0}", tenantUri);
+            console.log(`[ext: web-request-test] Fetching tenants with uri ${tenantUri}`);
             let tenantList: string[] = [];
             const tenantResponse =
                 await makeGetRequestWithToken<GetTenantsResponseData>(
@@ -118,10 +129,9 @@ export abstract class MsalAzureAuth {
                 );
             const data = tenantResponse.data;
             if (this.isErrorResponseBodyWithError(data)) {
-                console.error(
-                    `Error fetching tenants :${data.error.code} - ${data.error.message}`,
+                console.error(`[ext: web-request-test] Error fetching tenants: ${data.error.code} - ${data.error.message}`,
                 );
-                throw new Error(`${data.error.code} - ${data.error.message}`);
+                throw new Error(`[ext: web-request-test] Error fetching tenants: ${data.error.code} - ${data.error.message}`);
             }
             const tenants: ITenant[] = data.value.map(
                 (tenantInfo: ITenantResponse) => {
@@ -129,10 +139,7 @@ export abstract class MsalAzureAuth {
                         tenantList.push(tenantInfo.displayName);
                     } else {
                         tenantList.push(tenantInfo.tenantId);
-                        console.info(
-                            "Tenant display name found empty: {0}",
-                            tenantInfo.tenantId,
-                        );
+                        console.log(`[ext: web-request-test] Tenant display name found empty: ${tenantInfo.tenantId}`);
                     }
                     return {
                         id: tenantInfo.tenantId,
@@ -144,7 +151,7 @@ export abstract class MsalAzureAuth {
                     } as ITenant;
                 },
             );
-            console.log(`Tenants: ${tenantList}`);
+            console.log(`[ext: web-request-test] Tenants: ${tenantList}`);
             const homeTenantIndex = tenants.findIndex(
                 (tenant) => tenant.tenantCategory === Constants.homeCategory,
             );
@@ -153,10 +160,10 @@ export abstract class MsalAzureAuth {
                 const homeTenant = tenants.splice(homeTenantIndex, 1);
                 tenants.unshift(homeTenant[0]);
             }
-            console.log(`Filtered Tenants: ${tenantList}`);
+            console.log(`[ext: web-request-test] Filtered Tenants: ${tenantList}`);
             return tenants;
         } catch (ex) {
-            console.error(`Error fetching tenants :${ex}`);
+            console.error(`[ext: web-request-test] Error fetching tenants :${ex}`);
             throw ex;
         }
     }
@@ -172,13 +179,9 @@ export abstract class MsalAzureAuth {
         key: string,
         tenants: ITenant[],
     ): IAccount {
-        console.log(
-            `Token Claims acccount: ${tokenClaims.name}, TID: ${tokenClaims.tid}`,
-        );
+        console.log(`[ext: web-requeset-test] createAccount called with tenants`);
         tenants.forEach((tenant) => {
-            console.log(
-                `Tenant ID: ${tenant.id}, Tenant Name: ${tenant.displayName}`,
-            );
+            console.log(`[ext: web-request-test] Tenant ID: ${tenant.id}, Tenant Name: ${tenant.displayName}`);
         });
 
         // Determine if this is a microsoft account
@@ -190,9 +193,11 @@ export abstract class MsalAzureAuth {
             tokenClaims.iss ===
                 `${this.loginEndpointUrl}72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0`
         ) {
+            console.log('[ext: web-request-test] Account issuer: corp');
             accountIssuer = Constants.AccountIssuer.Corp;
         }
         if (tokenClaims?.idp === "live.com") {
+            console.log('[ext: web-request-test] Account issuer: msft');
             accountIssuer = Constants.AccountIssuer.Msft;
         }
 
@@ -215,9 +220,7 @@ export abstract class MsalAzureAuth {
                 displayName: "Microsoft Account",
             };
         } else {
-            console.info(
-                "Could not find tenant information from tokenClaims, falling back to common Tenant.",
-            );
+            console.log("[ext: web-request-test] Could not find tenant information from tokenClaims, falling back to common Tenant.");
         }
 
         let displayName = name;
@@ -228,14 +231,15 @@ export abstract class MsalAzureAuth {
         let contextualDisplayName: string;
         switch (accountIssuer) {
             case Constants.AccountIssuer.Corp:
-                contextualDisplayName =
-                    "Microsoft Corp";
+                console.log('[ext: web-request-test] contextual display name: Microsoft Corp');
+                contextualDisplayName = "Microsoft Corp";
                 break;
             case Constants.AccountIssuer.Msft:
-                contextualDisplayName =
-                    "Microsoft Entra Account";
+                console.log('[ext: web-request-test] contextual display name: Microsoft Account');
+                contextualDisplayName = "Microsoft Entra Account";
                 break;
             default:
+                console.log(`[ext: web-request-test] contextual display name: ${displayName}`);
                 contextualDisplayName = displayName;
         }
 
@@ -243,6 +247,8 @@ export abstract class MsalAzureAuth {
             accountIssuer === Constants.AccountIssuer.Msft
                 ? AccountType.Microsoft
                 : AccountType.WorkSchool;
+
+        console.log(`[ext: web-request-test] Account type: ${accountType}`);
 
         const account: IAccount = {
             key: {

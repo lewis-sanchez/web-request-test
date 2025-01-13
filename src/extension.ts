@@ -14,6 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
 	context.subscriptions.push(vscode.commands.registerCommand('web-request-test.makeWebRequest', async () => {
+		console.log('[ext: web-request-test] Starting command makeWebRequest');
 		// Prompt the user for input
 		const requestUrl = await vscode.window.showInputBox({
 			placeHolder: 'https://www.example.com',
@@ -22,7 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 		// Display the input back to the user
 		if (requestUrl) {
-			console.log('Making request to URL: ', requestUrl);
 			try {
 				let response = await makeGetRequest<any>(requestUrl);
 
@@ -34,12 +34,16 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			}
 			catch (error) {
-				console.error('Error making request: ', error);
+				console.error('[ext: web-request-test] Error making request: ', error);
 			}
 		}
+
+		console.log('[ext: web-request-test] Finished running command makeWebRequest');
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('web-request-test.addAadAccount', async () => {
+		console.log('[ext: web-request-test] Starting command addAadAccount');
+
 		const msalConfiguration: Configuration = {
 			auth: {
 				clientId: providerSettings.clientId,
@@ -48,8 +52,11 @@ export function activate(context: vscode.ExtensionContext) {
 		};
 		const publicClientApplication = new PublicClientApplication(msalConfiguration);
 		let msalAzureAuth = new MsalAzureCodeGrant(providerSettings, context, publicClientApplication);
+		
 		const accounts = await msalAzureAuth.startLogin();
-		console.log(accounts);
+		console.log('[ext: web-request-test] Accounts: ', accounts);
+		
+		console.log('[ext: web-request-test] Finished running command addAadAccount');
 	}));
 }
 
