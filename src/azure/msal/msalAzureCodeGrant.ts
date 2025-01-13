@@ -17,16 +17,13 @@ import {
     IProviderSettings,
 } from "../../models/contracts/azure";
 import { IDeferred } from "../../models/interfaces";
-// import { Logger } from "../../models/logger";
 import { MsalAzureAuth } from "./msalAzureAuth";
 import { SimpleWebServer } from "../simpleWebServer";
 import { AzureAuthError } from "../azureAuthError";
 import * as Constants from "../constants";
-// import * as LocalizedConstants from "../../constants/locConstants";
 import * as path from "path";
 import * as http from "http";
 import { promises as fs } from "fs";
-// import VscodeWrapper from "../../controllers/vscodeWrapper";
 
 interface ICryptoValues {
     nonce: string;
@@ -43,16 +40,11 @@ export class MsalAzureCodeGrant extends MsalAzureAuth {
         protected readonly providerSettings: IProviderSettings,
         protected readonly context: vscode.ExtensionContext,
         protected clientApplication: PublicClientApplication,
-//         protected readonly vscodeWrapper: VscodeWrapper,
-//         protected readonly logger: Logger,
     ) {
         super(
             providerSettings,
             context,
-//             clientApplication,
             AzureAuthType.AuthCodeGrant,
-//             vscodeWrapper,
-//             logger,
         );
         this.cryptoProvider = new CryptoProvider();
         this.pkceCodes = {

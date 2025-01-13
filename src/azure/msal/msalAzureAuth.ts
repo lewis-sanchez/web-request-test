@@ -3,33 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// import { Resource } from "@azure/arm-resources";
 import {
-//     AccountInfo,
-//     AuthError,
     AuthenticationResult,
-//     InteractionRequiredAuthError,
-//     PublicClientApplication,
-//     SilentFlowRequest,
 } from "@azure/msal-node";
 import * as url from "url";
 import * as vscode from "vscode";
-// import * as LocalizedConstants from "../../constants/locConstants";
-// import VscodeWrapper from "../../controllers/vscodeWrapper";
 import {
     AccountType,
     AzureAuthType,
-//     IAADResource,
     IAccount,
     IPromptFailedResult,
     IProviderSettings,
     ITenant,
 } from "../../models/contracts/azure";
 import { IDeferred } from "../../models/interfaces";
-// import { Logger } from "../../models/logger";
 import { AzureAuthError } from "../azureAuthError";
 import * as Constants from "../constants";
-// import axios, { AxiosResponse, AxiosRequestConfig } from "axios";
 import { ErrorResponseBody } from "@azure/arm-subscriptions";
 import { makeGetRequestWithToken } from "../../network/request";
 
@@ -42,17 +31,12 @@ export abstract class MsalAzureAuth {
     protected readonly loginEndpointUrl: string;
     protected readonly redirectUri: string;
     protected readonly scopes: string[];
-//     protected readonly scopesString: string;
     protected readonly clientId: string;
-//     protected readonly resources: Resource[];
 
     constructor(
         protected readonly providerSettings: IProviderSettings,
         protected readonly context: vscode.ExtensionContext,
-//         protected clientApplication: PublicClientApplication,
         protected readonly authType: AzureAuthType,
-//         protected readonly vscodeWrapper: VscodeWrapper,
-//         protected readonly logger: Logger,
     ) {
         this.loginEndpointUrl =
             this.providerSettings.loginEndpoint ??
@@ -60,7 +44,6 @@ export abstract class MsalAzureAuth {
         this.redirectUri = "http://localhost";
         this.clientId = this.providerSettings.clientId;
         this.scopes = [...this.providerSettings.scopes];
-        // this.scopesString = this.scopes.join(" ");
     }
 
     public async startLogin(): Promise<IAccount | IPromptFailedResult> {
@@ -119,180 +102,6 @@ export abstract class MsalAzureAuth {
         response: AuthenticationResult | null;
         authComplete: IDeferred<void, Error>;
     }>;
-
-//     /**
-//      * Gets the access token for the correct account and scope from the token cache, if the correct token doesn't exist in the token cache
-//      * (i.e. expired token, wrong scope, etc.), sends a request for a new token using the refresh token
-//      * @param account
-//      * @param azureResource
-//      * @returns The authentication result, including the access token
-//      */
-//     public async getToken(
-//         account: IAccount,
-//         tenantId: string,
-//         settings: IAADResource,
-//     ): Promise<AuthenticationResult | null> {
-//         let accountInfo: AccountInfo | null;
-//         try {
-//             accountInfo = await this.getAccountFromMsalCache(account.key.id);
-//         } catch (e) {
-//             this.logger.error(
-//                 "Error: Could not fetch account from MSAL cache, re-authentication needed.",
-//             );
-//             // build refresh token request
-//             const tenant: ITenant = {
-//                 id: tenantId,
-//                 displayName: "",
-//             };
-//             return this.handleInteractionRequired(tenant, settings, false);
-//         }
-//         // Resource endpoint must end with '/' to form a valid scope for MSAL token request.
-//         const endpoint = settings.endpoint.endsWith("/")
-//             ? settings.endpoint
-//             : settings.endpoint + "/";
-
-//         if (!account) {
-//             this.logger.error("Error: Account not received.");
-//             return null;
-//         }
-
-//         if (!tenantId) {
-//             tenantId = account.properties.owningTenant.id;
-//         }
-
-//         let newScope: string[];
-//         if (
-//             settings.id ===
-//             this.providerSettings.resources.windowsManagementResource.id
-//         ) {
-//             newScope = [`${endpoint}user_impersonation`];
-//         } else {
-//             newScope = [`${endpoint}.default`];
-//         }
-
-//         let authority = this.loginEndpointUrl + tenantId;
-//         this.logger.info(`Authority URL set to: ${authority}`);
-
-//         // construct request
-//         // forceRefresh needs to be set true here in order to fetch the correct token, due to this issue
-//         // https://github.com/AzureAD/microsoft-authentication-library-for-js/issues/3687
-//         const tokenRequest: SilentFlowRequest = {
-//             account: accountInfo!,
-//             authority: authority,
-//             scopes: newScope,
-//             forceRefresh: true,
-//         };
-//         try {
-//             return await this.clientApplication.acquireTokenSilent(
-//                 tokenRequest,
-//             );
-//         } catch (e) {
-//             this.logger.error("Failed to acquireTokenSilent", e);
-//             if (e instanceof AuthError && this.accountNeedsRefresh(e)) {
-//                 // build refresh token request
-//                 const tenant: ITenant = {
-//                     id: tenantId,
-//                     displayName: "",
-//                 };
-//                 return this.handleInteractionRequired(tenant, settings);
-//             } else if (e.name === "ClientAuthError") {
-//                 this.logger.verbose(
-//                     "[ClientAuthError] Failed to silently acquire token",
-//                 );
-//             }
-
-//             this.logger.error(
-//                 `Failed to silently acquire token, not InteractionRequiredAuthError: ${e.message}`,
-//             );
-//             throw e;
-//         }
-//     }
-
-//     /**
-//      * Determines whether the account needs to be refreshed based on received error instance
-//      * and STS error codes from errorMessage.
-//      * @param error AuthError instance
-//      */
-//     private accountNeedsRefresh(error: AuthError): boolean {
-//         return (
-//             error instanceof InteractionRequiredAuthError ||
-//             error.errorMessage.includes(Constants.AADSTS70043) ||
-//             error.errorMessage.includes(Constants.AADSTS50020) ||
-//             error.errorMessage.includes(Constants.AADSTS50173)
-//         );
-//     }
-
-//     public async refreshAccessToken(
-//         account: IAccount,
-//         tenantId: string,
-//         settings: IAADResource,
-//     ): Promise<IAccount | undefined> {
-//         if (account) {
-//             try {
-//                 const tokenResult = await this.getToken(
-//                     account,
-//                     tenantId,
-//                     settings,
-//                 );
-//                 if (!tokenResult) {
-//                     account.isStale = true;
-//                     return account;
-//                 }
-
-//                 const tokenClaims = this.getTokenClaims(
-//                     tokenResult.accessToken,
-//                 );
-//                 if (!tokenClaims) {
-//                     account.isStale = true;
-//                     return account;
-//                 }
-
-//                 const token: IToken = {
-//                     key: tokenResult.account!.homeAccountId,
-//                     token: tokenResult.accessToken,
-//                     tokenType: tokenResult.tokenType,
-//                     expiresOn: tokenResult.account!.idTokenClaims!.exp,
-//                 };
-
-//                 return await this.hydrateAccount(token, tokenClaims);
-//             } catch (ex) {
-//                 account.isStale = true;
-//                 throw ex;
-//             }
-//         } else {
-//             this.logger.error(
-//                 `refreshAccessToken: Account not received for refreshing access token.`,
-//             );
-//             throw Error(LocalizedConstants.msgAccountNotFound);
-//         }
-//     }
-
-//     public async loadTokenCache(): Promise<void> {
-//         let tokenCache = this.clientApplication.getTokenCache();
-//         void tokenCache.getAllAccounts();
-//     }
-
-//     public async getAccountFromMsalCache(
-//         accountId: string,
-//     ): Promise<AccountInfo | null> {
-//         const cache = this.clientApplication.getTokenCache();
-//         if (!cache) {
-//             this.logger.error("Error: Could not fetch token cache.");
-//             return null;
-//         }
-
-//         let account: AccountInfo | null;
-//         // if the accountId is a home ID, it will include a '.' character
-//         if (accountId.includes(".")) {
-//             account = await cache.getAccountByHomeId(accountId);
-//         } else {
-//             account = await cache.getAccountByLocalId(accountId);
-//         }
-//         if (!account) {
-//             throw new Error("Error: Could not find account from MSAL Cache.");
-//         }
-//         return account;
-//     }
 
     public async getTenants(token: string): Promise<ITenant[]> {
         const tenantUri = url.resolve(
@@ -357,108 +166,6 @@ export abstract class MsalAzureAuth {
     ): body is ErrorResponseBodyWithError {
         return "error" in body && body.error;
     }
-
-    // private async makeGetRequest<T>(
-    //     uri: string,
-    //     token: string,
-    // ): Promise<AxiosResponse<T>> {
-    //     const config: AxiosRequestConfig = {
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //             Authorization: `Bearer ${token}`,
-    //         },
-    //         validateStatus: () => true, // Never throw
-    //         proxy: false,
-    //     };
-
-    //     const response: AxiosResponse = await axios.get<T>(uri, config);
-    //     console.log(
-    //         "GET request ",
-    //         [
-    //             {
-    //                 name: "response",
-    //                 objOrArray:
-    //                     (response.data?.value as ITenantResponse[]) ??
-    //                     (response.data as GetTenantsResponseData),
-    //             },
-    //         ],
-    //         [],
-    //         uri,
-    //     );
-    //     return response;
-    // }
-
-//     //#region interaction handling
-//     public async handleInteractionRequired(
-//         tenant: ITenant,
-//         settings: IAADResource,
-//         promptUser: boolean = true,
-//     ): Promise<AuthenticationResult | null> {
-//         let shouldOpen: boolean;
-//         if (promptUser) {
-//             shouldOpen = await this.askUserForInteraction(tenant, settings);
-//             if (shouldOpen) {
-//                 const result = await this.login(tenant);
-//                 result?.authComplete?.resolve();
-//                 return result?.response;
-//             }
-//         } else {
-//             const result = await this.login(tenant);
-//             result?.authComplete?.resolve();
-//             return result?.response;
-//         }
-
-//         return null;
-//     }
-
-//     /**
-//      * Asks the user if they would like to do the interaction based authentication as required by OAuth2
-//      * @param tenant
-//      * @param resource
-//      */
-//     private async askUserForInteraction(
-//         tenant: ITenant,
-//         settings: IAADResource,
-//     ): Promise<boolean> {
-//         if (!tenant.displayName && !tenant.id) {
-//             throw new Error("Tenant did not have display name or id");
-//         }
-
-//         interface IConsentMessageItem extends vscode.MessageItem {
-//             booleanResult: boolean;
-//             action?: (tenantId: string) => Promise<void>;
-//         }
-
-//         const openItem: IConsentMessageItem = {
-//             title: LocalizedConstants.azureConsentDialogOpen,
-//             booleanResult: true,
-//         };
-
-//         const closeItem: IConsentMessageItem = {
-//             title: LocalizedConstants.Common.cancel,
-//             isCloseAffordance: true,
-//             booleanResult: false,
-//         };
-
-//         const messageBody = LocalizedConstants.azureConsentDialogBodyAccount(
-//             settings.id,
-//         );
-//         const result = await vscode.window.showInformationMessage(
-//             messageBody,
-//             { modal: true },
-//             openItem,
-//             closeItem,
-//         );
-
-//         if (result?.action) {
-//             await result.action(tenant.id);
-//         }
-
-//         return result?.booleanResult || false;
-//     }
-//     //#endregion
-
-//     //#region data modeling
 
     public createAccount(
         tokenClaims: ITokenClaims,
@@ -564,46 +271,7 @@ export abstract class MsalAzureAuth {
 
         return account;
     }
-//     //#endregion
-
-//     //#region inconsequential
-//     protected getTokenClaims(accessToken: string): ITokenClaims {
-//         try {
-//             const split = accessToken.split(".");
-//             return JSON.parse(Buffer.from(split[1], "base64").toString("utf8"));
-//         } catch (ex) {
-//             throw new Error(
-//                 "Unable to read token claims: " + JSON.stringify(ex),
-//             );
-//         }
-//     }
-
-//     protected toBase64UrlEncoding(base64string: string): string {
-//         return base64string
-//             .replace(/=/g, "")
-//             .replace(/\+/g, "-")
-//             .replace(/\//g, "_"); // Need to use base64url encoding
-//     }
-
-//     public async clearCredentials(account: IAccount): Promise<void> {
-//         try {
-//             const tokenCache = this.clientApplication.getTokenCache();
-//             let accountInfo: AccountInfo | null =
-//                 await this.getAccountFromMsalCache(account.key.id);
-//             await tokenCache.removeAccount(accountInfo!);
-//         } catch (ex) {
-//             // We need not prompt user for error if token could not be removed from cache.
-//             this.logger.error("Error when removing token from cache: ", ex);
-//         }
-//     }
-
-//     // tslint:disable:no-empty
-//     public async autoOAuthCancelled(): Promise<void> {}
-
-//     //#endregion
 }
-
-// //#region models
 
 export interface IAccountKey {
     /**
@@ -619,13 +287,6 @@ export interface IAccessToken extends IAccountKey {
     token: string;
 }
 
-// export interface IRefreshToken extends IAccountKey {
-//     /**
-//      * Refresh Token
-//      */
-//     token: string;
-// }
-
 export interface ITenantResponse {
     // https://docs.microsoft.com/en-us/rest/api/resources/tenants/list
     id: string;
@@ -633,10 +294,6 @@ export interface ITenantResponse {
     displayName?: string;
     tenantCategory?: string;
 }
-
-// export interface IMultiTenantTokenResponse {
-//     [tenantId: string]: IToken | undefined;
-// }
 
 export interface IToken extends IAccountKey {
     /**
@@ -795,44 +452,3 @@ export interface ITokenClaims {
      */
     ver: string;
 }
-
-// export type OAuthTokenResponse = {
-//     accessToken: IAccessToken;
-//     refreshToken: IRefreshToken | undefined;
-//     tokenClaims: ITokenClaims;
-//     expiresOn: string;
-// };
-
-// export interface ITokenPostData {
-//     grant_type:
-//         | "refresh_token"
-//         | "authorization_code"
-//         | "urn:ietf:params:oauth:grant-type:device_code";
-//     client_id: string;
-//     resource: string;
-// }
-
-// export interface IRefreshTokenPostData extends ITokenPostData {
-//     grant_type: "refresh_token";
-//     refresh_token: string;
-//     client_id: string;
-//     tenant: string;
-// }
-
-// export interface IAuthorizationCodePostData extends ITokenPostData {
-//     grant_type: "authorization_code";
-//     code: string;
-//     code_verifier: string;
-//     redirect_uri: string;
-// }
-
-// export interface IDeviceCodeStartPostData
-//     extends Omit<ITokenPostData, "grant_type"> {}
-
-// export interface IDeviceCodeCheckPostData
-//     extends Omit<ITokenPostData, "resource"> {
-//     grant_type: "urn:ietf:params:oauth:grant-type:device_code";
-//     tenant: string;
-//     code: string;
-// }
-// //#endregion
