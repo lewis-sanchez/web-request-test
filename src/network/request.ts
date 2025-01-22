@@ -52,6 +52,8 @@ export async function makeGetRequest<T>(requestUrl: string) {
     console.log("No proxy endpoint was found in the HTTP_PROXY, HTTPS_PROXY environment variables or in the workspace HTTP configuration.");
     console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
     const response: AxiosResponse = await axios.get<T>(requestUrl, config);
+    console.log(`[ext: web-request-test] ${response.status}-${response.statusText} response received from ${requestUrl}`);
+
 
     return response;
 }
@@ -101,7 +103,7 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
         // that Axios doesn't try to reach this URL with HTTP port 80 on HTTP proxies, which result in an error. See https://github.com/axios/axios/issues/925
 		const requestUrlWithPort = `${parsedRequestUrl.protocol}//${parsedRequestUrl.hostname}:${port}${parsedRequestUrl.path}`;
 		const response: AxiosResponse = await axios.get<T>(requestUrlWithPort, config);
-		console.log(`${response.status} response received from ${requestUrlWithPort}`);
+		console.log(`[ext: web-request-test] ${response.status} response received from ${requestUrlWithPort}`);
 		return response;
     }
 
