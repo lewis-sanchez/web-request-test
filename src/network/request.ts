@@ -62,7 +62,6 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
              Authorization: `Bearer ${token}`,
         },
         validateStatus: () => true,
-        proxy: false,
     };
 
     const httpConfig = vscode.workspace.getConfiguration('http');
@@ -73,6 +72,8 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
     }
 
     if (proxy) {
+        config.proxy = false;
+
         console.log(`[ext: web-request-test] Found proxy endpoint: ${proxy}`);
         console.log("[ext: web-request-test] Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
 
