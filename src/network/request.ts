@@ -62,7 +62,7 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
              Authorization: `Bearer ${token}`,
         },
         validateStatus: () => true,
-        proxy: false
+        proxy: false,
     };
 
     const httpConfig = vscode.workspace.getConfiguration('http');
@@ -78,20 +78,33 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
 
         const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
 
-        if (proxy.startsWith('https')) {
+        if (agent.isHttps) {
             console.log("[ext: web-request-test] Setting https agent in axios request config.");
 
-            config.httpsAgent = agent;
+            config.httpsAgent = agent.agent;
         }
         else {
             console.log("[ext: web-request-test] Setting http agent in axios request config.");
 
-            config.httpAgent = agent;
+            config.httpAgent = agent.agent;
         }
+
+        const HTTPS_PORT = 443;
+		const HTTP_PORT = 80;
+		const parsedRequestUrl = url.parse(requestUrl);
+		const port = parsedRequestUrl.protocol?.startsWith("https") ? HTTPS_PORT : HTTP_PORT;
+
+        // Request URL will include HTTPS port 443 ('https://management.azure.com:443/tenants?api-version=2019-11-01'), so
+        // that Axios doesn't try to reach this URL with HTTP port 80 on HTTP proxies, which result in an error. See https://github.com/axios/axios/issues/925
+		const requestUrlWithPort = `${parsedRequestUrl.protocol}//${parsedRequestUrl.hostname}:${port}${parsedRequestUrl.path}`;
+		const response: AxiosResponse = await axios.get<T>(requestUrlWithPort, config);
+		console.log(`${response.status} response received from ${requestUrlWithPort}`);
+		return response;
     }
 
     console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
     const response: AxiosResponse = await axios.get<T>(requestUrl, config);
+    console.log(`${response.status}-${response.statusText} response received from ${requestUrl}`);
 
     return response;
 }
@@ -128,6 +141,7 @@ function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boo
 
     const agentOptions = getProxyAgentOptions(url.parse(requestUrl), proxy, proxyStrictSSL);
     if (!agentOptions || !agentOptions.host || !agentOptions.port) {
+        console.log("Unable to read proxy agent options to create proxy agent.");
         throw new Error('[ext: web-request-test] Unable to read proxy agent options to create proxy agent.');
     }
 
@@ -165,7 +179,7 @@ function createProxyAgent(requestUrl: string, proxy: string, proxyStrictSSL: boo
     console.log("[ext: web-request-test] Is proxy endpoint protocol using HTTPS: ", isProxyHttps);
 
     const proxyAgent = {
-        isHttps: isRequestHttps,
+        isHttps: isProxyHttps,
         agent: createTunnelingAgent(isRequestHttps, isProxyHttps, tunnelOptions),
     } as ProxyAgent;
 
