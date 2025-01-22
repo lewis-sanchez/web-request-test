@@ -21,11 +21,11 @@
     "commands": [
       {
         "command": "web-request-test.makeWebRequest",
-        "title": "Make Get Request"
+        "title": "Make Get Request Test"
       },
       {
         "command": "web-request-test.addAadAccount",
-        "title": "Add AAD Account"
+        "title": "Add AAD Account Test"
       }
     ]
   },
