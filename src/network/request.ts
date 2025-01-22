@@ -19,8 +19,7 @@ export async function makeGetRequest<T>(requestUrl: string) {
         headers: {
             'Content-Type': 'application/json',
         },
-        validateStatus: () => true,
-        proxy: false
+        validateStatus: () => true
     };
 
     const httpConfig = vscode.workspace.getConfiguration('http');
@@ -33,6 +32,8 @@ export async function makeGetRequest<T>(requestUrl: string) {
     if (proxy) {
         console.log('[ext: web-request-test] Found proxy endpoint: ', proxy);
         console.log("[ext: web-request-test] Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
+
+        config.proxy = false;
 
         const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
 
@@ -48,6 +49,7 @@ export async function makeGetRequest<T>(requestUrl: string) {
         }
     }
 
+    console.log("No proxy endpoint was found in the HTTP_PROXY, HTTPS_PROXY environment variables or in the workspace HTTP configuration.");
     console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
     const response: AxiosResponse = await axios.get<T>(requestUrl, config);
 
@@ -61,7 +63,7 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
             'Content-Type': 'application/json',
              Authorization: `Bearer ${token}`,
         },
-        validateStatus: () => true,
+        validateStatus: () => true
     };
 
     const httpConfig = vscode.workspace.getConfiguration('http');
@@ -72,10 +74,10 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
     }
 
     if (proxy) {
-        config.proxy = false;
-
         console.log(`[ext: web-request-test] Found proxy endpoint: ${proxy}`);
         console.log("[ext: web-request-test] Is strictSSL enabled on proxy: ", httpConfig['proxyStrictSSL']);
+
+        config.proxy = false;
 
         const agent = createProxyAgent(requestUrl, proxy, httpConfig['proxyStrictSSL']);
 
@@ -103,6 +105,7 @@ export async function makeGetRequestWithToken<T>(requestUrl: string, token: stri
 		return response;
     }
 
+    console.log("No proxy endpoint was found in the HTTP_PROXY, HTTPS_PROXY environment variables or in the workspace HTTP configuration.");
     console.log("[ext: web-request-test] Sending GET request to provided request URL: ", requestUrl);
     const response: AxiosResponse = await axios.get<T>(requestUrl, config);
     console.log(`${response.status}-${response.statusText} response received from ${requestUrl}`);
